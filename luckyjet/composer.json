@@ -1,0 +1,9 @@
+{
+    "name": "dvys-luckyjet",
+    "description": "DVYS AI - Lucky Jet Prediction Engine",
+    "require": {
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*"
+    }
+}

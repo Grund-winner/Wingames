@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: dvystropicana
+    runtime: docker
+    plan: free
+    repo: https://github.com/Grund-winner/dvystropicana.git
+    branch: main
+    region: frankfurt

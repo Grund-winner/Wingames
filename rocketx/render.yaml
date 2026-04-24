@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: dvysrocketx
+    runtime: docker
+    plan: free
+    region: frankfurt

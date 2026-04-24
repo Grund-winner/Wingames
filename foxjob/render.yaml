@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: dvysjobfox
+    runtime: docker
+    plan: free
+    branch: main
+    repo: https://github.com/Grund-winner/dvysjobfox.git
+    envVars:
+      - key: PORT
+        value: 3000

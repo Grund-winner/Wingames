@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0618">
+<title>DVYS - Lucky Jet</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:#0a0618;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;width:100%;height:100%;overflow:hidden;touch-action:manipulation}
+  .app{width:100%;height:100%;max-width:430px;margin:0 auto;display:flex;flex-direction:column;position:relative}
+
+  /* ============ GAME AREA ============ */
+  .game-area{width:100%;height:100%;position:relative;overflow:hidden;overscroll-behavior:none}
+  .game-area iframe{position:absolute;top:-10%;left:0;width:100%;height:100%;border:none;display:block;transform:scale(1,1.5);transform-origin:50% 0%;touch-action:none}
+
+  /* ============ OVERLAY: TOP ============ */
+  .ov-top{
+    position:absolute;top:0;left:0;right:0;
+    height:15%;z-index:20;
+    background:linear-gradient(180deg,#0a0618 0%,#0d0820 70%,rgba(13,8,32,.92) 100%);
+    display:flex;justify-content:center;align-items:center;
+    padding:4px 10px;
+    padding-top:max(4px,env(safe-area-inset-top));
+  }
+  .ov-top::after{
+    content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent 0%,rgba(113,0,255,.4) 50%,transparent 100%);
+  }
+  .back-btn{
+    position:absolute;left:10px;top:50%;transform:translateY(-50%);
+    padding:5px 12px;border-radius:6px;
+    background:rgba(113,0,255,.2);border:1px solid rgba(179,136,255,.35);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;z-index:30;text-decoration:none;
+    color:#b388ff;font-size:13px;font-weight:700;
+    transition:all .2s ease;gap:4px;
+  }
+  .back-btn:active{transform:translateY(-50%) scale(.95);background:rgba(113,0,255,.4)}
+  .header-center{display:flex;flex-direction:column;align-items:center;gap:2px}
+  .logo{font-size:22px;font-weight:900;letter-spacing:3px;background:linear-gradient(135deg,#fff 0%,#b388ff 60%,#7100ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1}
+  .status-row{display:flex;align-items:center;gap:5px}
+  .live-dot{width:6px;height:6px;background:#00b24b;border-radius:50%;box-shadow:0 0 6px rgba(0,178,75,.7);animation:blink 2s ease-in-out infinite}
+  .live-dot.off{background:#ff4444;box-shadow:0 0 6px rgba(255,68,68,.7)}
+  .live-dot.warn{background:#ffa500;box-shadow:0 0 6px rgba(255,165,0,.7)}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+  .ov-status{font-size:9px;color:rgba(255,255,255,.5);font-weight:500;letter-spacing:.5px}
+  .ov-round{font-size:8px;color:rgba(255,255,255,.3);font-weight:600;margin-left:2px}
+  .ov-logo{position:absolute;right:10px;top:50%;transform:translateY(-50%);height:23px;width:auto;max-width:80px;object-fit:contain;opacity:.65}
+
+  /* ============ OVERLAY: BOTTOM ============ */
+  .ov-bottom{
+    position:absolute;bottom:0;left:0;right:0;
+    height:43%;z-index:20;
+    background:linear-gradient(180deg,rgba(10,6,24,.88) 0%,#0a0618 8%);
+    display:flex;flex-direction:column;
+    padding:0 14px;
+    padding-bottom:max(10px,env(safe-area-inset-bottom));
+    overflow-y:auto;overflow-x:hidden;
+    scrollbar-width:none;
+  }
+  .ov-bottom::-webkit-scrollbar{display:none}
+  .ov-bottom::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent 0%,rgba(113,0,255,.5) 50%,transparent 100%);
+  }
+
+  /* --- PREDICTION --- */
+  .pred-section{padding:14px 0 10px;text-align:center;border-bottom:1px solid rgba(113,0,255,.12)}
+  .pred-label-row{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px}
+  .pred-tag{font-size:9px;text-transform:uppercase;letter-spacing:2.5px;color:rgba(255,255,255,.35);font-weight:700}
+  .pred-data{font-size:8px;color:rgba(255,255,255,.22);font-weight:600}
+  .pred-conf{font-size:11px;font-weight:800;color:#7100ff}
+  .pred-multi{font-size:3rem;font-weight:900;line-height:1;transition:all .3s ease;margin-bottom:6px}
+  .pred-multi.loading{color:rgba(255,255,255,.2);animation:pulse-t 1.5s ease-in-out infinite}
+  @keyframes pulse-t{0%,100%{opacity:.3}50%{opacity:.7}}
+  .pred-subrow{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;min-height:18px}
+  .sig{font-size:8px;padding:2px 7px;border-radius:8px;font-weight:700;white-space:nowrap;letter-spacing:.3px}
+  .sig.up{background:rgba(0,178,75,.12);color:#00ff88;border:1px solid rgba(0,255,136,.15)}
+  .sig.down{background:rgba(255,60,60,.12);color:#ff6b6b;border:1px solid rgba(255,107,107,.15)}
+  .sig.info{background:rgba(113,0,255,.12);color:#b388ff;border:1px solid rgba(179,136,255,.15)}
+
+  /* --- HISTORIQUE --- */
+  .hist-section{padding:10px 0;border-bottom:1px solid rgba(113,0,255,.1)}
+  .hist-title{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:rgba(255,255,255,.3);font-weight:600;margin-bottom:8px}
+  .hist-row{display:flex;gap:4px;flex-wrap:wrap}
+  .chip{font-size:10px;font-weight:800;padding:3px 8px;border-radius:8px;white-space:nowrap;letter-spacing:.3px}
+  .chip.low{background:rgba(255,60,60,.08);color:#ff6b6b;border:1px solid rgba(255,60,60,.12)}
+  .chip.mid{background:rgba(113,0,255,.08);color:#b388ff;border:1px solid rgba(113,0,255,.12)}
+  .chip.high{background:rgba(0,178,75,.08);color:#00ff88;border:1px solid rgba(0,255,136,.12)}
+
+  /* --- PROMO --- */
+  .promo-section{padding:25px 0 4px}
+  .promo-box{background:linear-gradient(135deg,rgba(113,0,255,.08) 0%,rgba(60,20,120,.06) 100%);border:1px solid rgba(113,0,255,.15);border-radius:14px;padding:14px;position:relative;overflow:hidden}
+  .promo-box::before{content:'';position:absolute;top:-30px;right:-30px;width:80px;height:80px;background:radial-gradient(circle,rgba(113,0,255,.15) 0%,transparent 70%);border-radius:50%}
+  .promo-title{font-size:13px;font-weight:800;margin-bottom:8px;color:#fff;position:relative}
+  .promo-title span{color:#b388ff}
+  .promo-text{font-size:11px;color:rgba(255,255,255,.55);line-height:1.6;margin-bottom:6px;position:relative}
+  .promo-modules{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0;position:relative}
+  .promo-mod{font-size:8px;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(113,0,255,.1);color:rgba(255,255,255,.5);letter-spacing:.5px;text-transform:uppercase}
+
+  /* --- CTA --- */
+  .cta-section{padding:10px 0 6px}
+  .cta-box{background:linear-gradient(135deg,rgba(0,178,75,.08) 0%,rgba(0,100,50,.06) 100%);border:1px solid rgba(0,178,75,.2);border-radius:14px;padding:14px;text-align:center}
+  .cta-code{font-size:20px;font-weight:900;letter-spacing:4px;background:linear-gradient(135deg,#00ff88 0%,#00b24b 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
+  .cta-label{font-size:10px;color:rgba(255,255,255,.4);font-weight:500;margin-bottom:10px}
+  .cta-btn{display:inline-block;padding:8px 28px;border-radius:25px;background:linear-gradient(135deg,#00b24b 0%,#00ff88 100%);color:#0a0618;font-size:12px;font-weight:800;text-decoration:none;letter-spacing:1px;text-transform:uppercase;box-shadow:0 4px 20px rgba(0,178,75,.3);transition:all .2s ease}
+  .cta-btn:active{transform:scale(.96);box-shadow:0 2px 10px rgba(0,178,75,.2)}
+
+  /* --- STATS --- */
+  .stats-section{padding:8px 0 4px}
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .stat-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px 8px;text-align:center}
+  .stat-val{font-size:16px;font-weight:800;color:#b388ff;margin-bottom:2px}
+  .stat-label{font-size:8px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.3);font-weight:600}
+
+  /* ============ TOAST ============ */
+  .toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(113,0,255,.92);color:#fff;padding:8px 20px;border-radius:25px;font-size:11px;font-weight:700;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90%;text-align:center;letter-spacing:.5px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 4px 20px rgba(113,0,255,.4)}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="game-area">
+    <iframe id="gameFrame" src="" allow="autoplay; fullscreen; clipboard-write" sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-top-navigation-by-user-activation" scrolling="no"></iframe>
+
+    <div class="ov-top">
+      <a class="back-btn" id="backBtn" href="javascript:history.back()">&#8592; Retour</a>
+      <div class="header-center">
+        <span class="logo">DVYS</span>
+        <div class="status-row">
+          <div class="live-dot warn" id="liveDot"></div>
+          <span class="ov-status" id="headerStatus">Connexion...</span>
+          <span class="ov-round" id="roundNum">#0</span>
+        </div>
+      </div>
+      <img class="ov-logo" src="https://1play.gamedev-tech.cc/lucky_grm/assets/media/3caa6b7c2d37c3ae0bd198c86b81bb13.svg" alt="Lucky Jet">
+    </div>
+
+    <div class="ov-bottom">
+      <div class="pred-section">
+        <div class="pred-label-row">
+          <span class="pred-tag">Prediction DVYS</span>
+          <span class="pred-data" id="dataInfo"></span>
+          <span class="pred-conf" id="predConf">--%</span>
+        </div>
+        <div class="pred-multi loading" id="predVal">Chargement...</div>
+        <div class="pred-subrow" id="sigContainer"></div>
+      </div>
+
+      <div class="promo-section">
+        <div class="promo-box">
+          <div class="promo-title">L'intelligence <span>DVYS</span> en action</div>
+          <div class="promo-modules">
+            <span class="promo-mod">Tendance</span>
+            <span class="promo-mod">Series</span>
+            <span class="promo-mod">Volatilite</span>
+            <span class="promo-mod">Patterns</span>
+            <span class="promo-mod">Markov</span>
+            <span class="promo-mod">Mean Rev.</span>
+            <span class="promo-mod">Cycles</span>
+            <span class="promo-mod">Momentum</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var TOKEN_B = 'be30b1761af6eced3d9418e6ac4412f82100ca0c28601f572bef5d1a4e62b371b14121c4f26b71e57890f9d522c7b12b3944970205b3433ee8a885b4c8aec5b82be31fdfad1601274ede9f4b1fd1a3e595725994b8d8e9a59b2995bdacbc6896a5ba4e0ea57bf4d6e7b5284e3d681adb15bfdc4f37b14c41907c0ce450092ccd1f36ef00db26879b2136253162a8ef8837e0f2ec5f798b16597cf6d0c579ebb12bf20b0ce7544e009fce4659a417a81f80e1c11fb478712cdc.4fee4f0360f162b814eb6bad44fc9910.077dee8d-c923-4c02-9bee-757573662e69';
+var AUTH_URL  = 'https://crash-gateway-grm-cr.100hp.app/user/auth';
+var STATE_URL = 'https://crash-gateway-grm-cr.100hp.app/state';
+var HIST_URL  = 'https://crash-gateway-grm-cr.gamedev-tech.cc/history';
+var POLL_MS   = 800;
+
+/* ============ SCROLL BLOCK ============ */
+var gameArea = document.querySelector('.game-area');
+gameArea.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+gameArea.addEventListener('wheel', function(e) { e.preventDefault(); }, { passive: false });
+document.addEventListener('touchmove', function(e) {
+  if (!e.target.closest('.ov-bottom')) e.preventDefault();
+}, { passive: false });
+
+/* ============ DOM ELEMENTS ============ */
+var gameFrame = document.getElementById('gameFrame');
+var liveDot   = document.getElementById('liveDot');
+var headerStatus = document.getElementById('headerStatus');
+var roundNum  = document.getElementById('roundNum');
+var predVal   = document.getElementById('predVal');
+var predConf  = document.getElementById('predConf');
+var dataInfo  = document.getElementById('dataInfo');
+var sigContainer = document.getElementById('sigContainer');
+var histChips = document.getElementById('histChips');
+var toastEl   = document.getElementById('toast');
+var statRounds = document.getElementById('statRounds');
+var statAvg   = document.getElementById('statAvg');
+var statStd   = document.getElementById('statStd');
+
+/* ============ STATE ============ */
+var sessionHeaders = null;
+var allHistory = [];
+var lastState = null;
+var currentRoundId = null;
+var predictedForRoundId = null;
+var pollingActive = false;
+var toastTimer = null;
+
+/* ================================================================
+   DVYS MEMORY SYSTEM - Stockage persistant des historiques
+   ================================================================ */
+var MEM_KEY = 'dvys_memory';
+var MEM_MAX = 1000;
+
+function loadMemory() {
+  try {
+    var raw = localStorage.getItem(MEM_KEY);
+    if (!raw) return { history: [], predictions: [], hits: 0, total: 0 };
+    var m = JSON.parse(raw);
+    if (!m || !Array.isArray(m.history)) return { history: [], predictions: [], hits: 0, total: 0 };
+    return m;
+  } catch(e) { return { history: [], predictions: [], hits: 0, total: 0 }; }
+}
+
+function saveMemory(mem) {
+  try { localStorage.setItem(MEM_KEY, JSON.stringify(mem)); } catch(e) {}
+}
+
+function mergeWithMemory(apiCoefs) {
+  var mem = loadMemory();
+  var stored = mem.history;
+
+  if (!stored.length) {
+    mem.history = apiCoefs.slice();
+    saveMemory(mem);
+    return mem.history;
+  }
+
+  /* Trouver le point de chevauchement entre API et memoire stockee */
+  var apiLen = apiCoefs.length;
+  var storedLen = stored.length;
+  var overlap = 0;
+
+  for (var i = 0; i < Math.min(apiLen, storedLen); i++) {
+    var sIdx = storedLen - apiLen + i;
+    if (sIdx >= 0 && Math.abs(apiCoefs[i] - stored[sIdx]) < 0.001) {
+      overlap++;
+    } else {
+      break;
+    }
+  }
+
+  if (overlap >= Math.floor(apiLen * 0.5)) {
+    /* Chevauchement significatif - mettre a jour la fin */
+    var newCoefs = apiCoefs.slice(overlap);
+    mem.history = stored.concat(newCoefs);
+  } else {
+    /* Pas de chevauchement - concatener */
+    mem.history = stored.concat(apiCoefs);
+  }
+
+  /* Limiter la taille */
+  if (mem.history.length > MEM_MAX) {
+    mem.history = mem.history.slice(-MEM_MAX);
+  }
+
+  saveMemory(mem);
+  return mem.history;
+}
+
+function recordPrediction(predicted, confidence, category) {
+  var mem = loadMemory();
+  mem.predictions.push({
+    predicted: predicted,
+    confidence: confidence,
+    category: category,
+    timestamp: Date.now()
+  });
+  if (mem.predictions.length > 200) mem.predictions = mem.predictions.slice(-200);
+  saveMemory(mem);
+}
+
+/* Compte les predictions consecutives de la meme categorie */
+function getConsecutive() {
+  var mem = loadMemory();
+  var preds = mem.predictions;
+  if (!preds.length) return { cat: null, count: 0 };
+  var last = preds[preds.length - 1].category;
+  var count = 1;
+  for (var i = preds.length - 2; i >= 0; i--) {
+    if (preds[i].category === last) count++;
+    else break;
+  }
+  return { cat: last, count: count };
+}
+
+function validateLastPrediction(actual) {
+  var mem = loadMemory();
+  var preds = mem.predictions;
+  if (!preds.length) return;
+
+  var last = preds[preds.length - 1];
+  if (last.validated) return;
+
+  /* Categorie reelle du resultat */
+  var actualCat = actual < 2 ? 'low' : actual < 10 ? 'mid' : 'high';
+  var hit = last.category === actualCat;
+
+  last.validated = true;
+  last.actual = actual;
+  last.hit = hit;
+
+  mem.total = (mem.total || 0) + 1;
+  if (hit) mem.hits = (mem.hits || 0) + 1;
+
+  saveMemory(mem);
+}
+
+function getAccuracy() {
+  var mem = loadMemory();
+  if (!mem.total || mem.total < 3) return null;
+  return Math.round((mem.hits / mem.total) * 100);
+}
+
+function clearOldPredictions() {
+  var mem = loadMemory();
+  var cutoff = Date.now() - 3600000;
+  mem.predictions = mem.predictions.filter(function(p) { return p.timestamp > cutoff; });
+  saveMemory(mem);
+}
+
+/* ============ TOAST ============ */
+function showToast(msg, ms) {
+  ms = ms || 3000;
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { toastEl.classList.remove('show'); }, ms);
+}
+
+/* ============ AUTH ============ */
+function authenticate(b) {
+  return fetch(AUTH_URL, {
+    method: 'POST',
+    headers: { 'auth-token': b, 'Content-Type': 'application/json' },
+    body: '{}'
+  }).then(function(r) {
+    if (!r.ok) throw new Error('Auth HTTP ' + r.status);
+    return r.json();
+  }).then(function(data) {
+    if (!data.sessionId || !data.customerId) throw new Error('No session');
+    sessionHeaders = {
+      'customer-id': data.customerId,
+      'session-id': data.sessionId,
+      'accept': 'application/json'
+    };
+    return data;
+  });
+}
+
+/* ============ HISTORY FETCH ============ */
+function fetchHistory() {
+  if (!sessionHeaders) return Promise.reject('no session');
+  var h = {};
+  h['customer-id'] = sessionHeaders['customer-id'];
+  h['session-id'] = sessionHeaders['session-id'];
+  h['accept'] = 'application/json';
+  return fetch(HIST_URL, { method: 'GET', headers: h }).then(function(r) {
+    if (!r.ok) throw new Error('History HTTP ' + r.status);
+    return r.json();
+  });
+}
+
+function extractCoefs(data) {
+  var values = [];
+  if (!Array.isArray(data)) return values;
+  for (var i = 0; i < data.length; i++) {
+    var item = data[i];
+    if (item.finalValues && Array.isArray(item.finalValues)) {
+      for (var j = 0; j < item.finalValues.length; j++) {
+        var v = parseFloat(item.finalValues[j]);
+        if (v > 0) values.push(v);
+      }
+      continue;
+    }
+    var coef = item.coef || item.crash || item.value || item.topCoefficient || item.multiplier || item.coefficient;
+    if (coef !== undefined) {
+      var fv = parseFloat(coef);
+      if (fv > 0) values.push(fv);
+    }
+  }
+  return values;
+}
+
+/* ================================================================
+   DVYS PREDICTOR V4 - Tendances intelligentes avec rotation
+   - Detecte la tendance reelle du jeu (basse/moyenne/haute)
+   - Limite les predictions consecutives: low max 3, mid max 3, high max 2
+   - 3eme low = transition vers mid (>2x)
+   - 2eme high = retour automatique mid ou low
+   - Base sur la moyenne historique pour les valeurs
+   ================================================================ */
+var DVYSPredictor = (function() {
+
+  function avg(a){if(!a.length)return 0;var s=0;for(var i=0;i<a.length;i++)s+=a[i];return s/a.length}
+  function sd(a){if(a.length<2)return 0;var m=avg(a),s=0;for(var i=0;i<a.length;i++)s+=Math.pow(a[i]-m,2);return Math.sqrt(s/(a.length-1))}
+  function rr(a,b){return a+Math.random()*(b-a)}
+  function cl(v,l,h){return Math.max(l,Math.min(h,v))}
+  function cat(v){return v<2?'low':v<10?'mid':'high'}
+
+  /* === Detection de la tendance du jeu === */
+  function detectTrend(history) {
+    var n = history.length;
+    if (n < 5) return { trend: 'mid', strength: 0.5 };
+
+    var recent = history.slice(-10);
+    var recent8 = n >= 8 ? history.slice(-8) : recent;
+    var recent5 = n >= 5 ? history.slice(-5) : recent;
+
+    var avg5 = avg(recent5);
+    var avg8 = avg(recent8);
+    var avg10 = avg(recent);
+
+    /* Compter la distribution recente */
+    var lowC = 0, midC = 0, highC = 0;
+    for (var i = 0; i < recent.length; i++) {
+      if (recent[i] < 2) lowC++;
+      else if (recent[i] < 10) midC++;
+      else highC++;
+    }
+
+    var total = recent.length;
+    var lowPct = lowC / total;
+    var midPct = midC / total;
+    var highPct = highC / total;
+
+    /* Detection des series */
+    var streak = cat(recent[recent.length - 1]);
+    var streakLen = 1;
+    for (var j = recent.length - 2; j >= 0; j--) {
+      if (cat(recent[j]) === streak) streakLen++;
+      else break;
+    }
+
+    /* --- Regles de detection --- */
+    /* Basse: majorite de crashs < 2x ou moyenne recente basse */
+    if (lowPct >= 0.55 || (avg5 < 1.8 && avg8 < 2.2)) {
+      return { trend: 'low', strength: Math.min(lowPct / 0.7, 1), streak: streak, streakLen: streakLen };
+    }
+    /* Haute: majorite de crashs >= 10x ou moyenne recente elevee + serie haute */
+    if (highPct >= 0.4 || (avg5 > 6 && streak === 'high' && streakLen >= 2)) {
+      return { trend: 'high', strength: Math.min(highPct / 0.5, 1), streak: streak, streakLen: streakLen };
+    }
+    /* Moyenne: le reste du temps - la categorie la plus naturelle */
+    if (midPct >= 0.4 || (avg5 >= 2 && avg5 <= 8)) {
+      return { trend: 'mid', strength: Math.min(midPct / 0.6, 1), streak: streak, streakLen: streakLen };
+    }
+    /* Defaut: neutre → mid */
+    return { trend: 'mid', strength: 0.4, streak: streak, streakLen: streakLen };
+  }
+
+  /* === Generation de la valeur === */
+  function generateValue(chosenCat, history, forceTransition) {
+    var n = history.length;
+    var allAvg = avg(history);
+    var recent5 = n >= 5 ? avg(history.slice(-5)) : allAvg;
+
+    /* Moyennes par categorie depuis l'historique */
+    var lows = [], mids = [], highs = [];
+    for (var i = 0; i < n; i++) {
+      if (history[i] < 2) lows.push(history[i]);
+      else if (history[i] < 10) mids.push(history[i]);
+      else highs.push(history[i]);
+    }
+    var avgLow = lows.length ? avg(lows) : 1.35;
+    var avgMid = mids.length ? avg(mids) : 3.5;
+    var avgHigh = highs.length ? avg(highs) : 15;
+
+    var pred;
+
+    if (chosenCat === 'low') {
+      /* Cote < 2x: basee sur la moyenne des crashs bas recents */
+      pred = avgLow * rr(0.85, 1.20);
+      pred = cl(pred, 1.15, 1.98);
+    }
+    else if (chosenCat === 'mid' && forceTransition) {
+      /* Transition depuis low: 3eme prediction basse → premiere prediction mid */
+      pred = rr(2.05, 3.20);
+      pred = cl(pred, 2.01, 3.50);
+    }
+    else if (chosenCat === 'mid') {
+      /* Cote 2-9.99x: basee sur la moyenne des crashs moyens */
+      pred = avgMid * rr(0.65, 1.40);
+      pred = cl(pred, 2.0, 9.99);
+
+      /* Ajustement fin selon le momentum des 3 derniers */
+      if (n >= 3) {
+        var last3 = history.slice(-3);
+        var m3 = avg(last3);
+        if (m3 > 4) pred = cl(pred * rr(0.8, 1.1), 2.0, 9.99);
+        else if (m3 < 2) pred = cl(pred * rr(0.7, 1.05), 2.0, 7.0);
+      }
+    }
+    else if (chosenCat === 'high') {
+      /* Cote >= 10x: basee sur la moyenne des crashs hauts, plafonnée */
+      pred = avgHigh * rr(0.5, 1.0);
+      pred = cl(pred, 10.0, 22);
+    }
+
+    /* Bruit naturel */
+    pred = pred * rr(0.95, 1.05);
+    return cl(Math.round(pred * 100) / 100, 1.15, 25);
+  }
+
+  /* === CONFIANCE === */
+  function calcConfidence(chosenCat, trend, n, isForced) {
+    var conf = 50;
+
+    /* Plus on a de donnees, plus c'est fiable */
+    if (n >= 50) conf += 8;
+    else if (n >= 30) conf += 6;
+    else if (n >= 15) conf += 4;
+    else if (n >= 8) conf += 2;
+
+    /* Accord entre tendance et prediction */
+    if (chosenCat === trend.trend) {
+      conf += Math.round(trend.strength * 15);
+    } else if (isForced) {
+      conf -= 5; /* penalite si on a ete force de changer */
+    }
+
+    /* Historique de precision */
+    var acc = getAccuracy();
+    if (acc !== null) {
+      if (acc >= 60) conf += 8;
+      else if (acc >= 50) conf += 4;
+      else conf += 1;
+    }
+
+    return cl(Math.round(conf), 28, 92);
+  }
+
+  /* === PREDICTION PRINCIPALE === */
+  function predict(fullHistory) {
+    if (fullHistory.length < 3) {
+      return {
+        prediction: cl(avg(fullHistory) + rr(-.2, .2), 1.15, 4),
+        confidence: 25,
+        signals: ['donnees_insuffisantes'],
+        signalTypes: ['info'],
+        category: 'mid',
+        rounds: fullHistory.length,
+        avg: Math.round(avg(fullHistory) * 100) / 100,
+        std: 0,
+        accuracy: null
+      };
+    }
+
+    var n = fullHistory.length;
+
+    /* 1. Detecter la tendance reelle du jeu */
+    var trendInfo = detectTrend(fullHistory);
+    var gameTrend = trendInfo.trend;
+
+    /* 2. Verifier les predictions consecutives */
+    var consec = getConsecutive();
+    var isForced = false;
+    var chosenCat = gameTrend;
+
+    /* 3. Appliquer les limites de rotation */
+    if (consec.cat === 'low' && consec.count >= 3) {
+      /* Apres 3 predictions basses consecutives → transition vers mid */
+      chosenCat = 'mid';
+      isForced = true;
+    }
+    else if (consec.cat === 'mid' && consec.count >= 3) {
+      /* Apres 3 predictions moyennes consecutives → retour a low */
+      chosenCat = 'low';
+      isForced = true;
+    }
+    else if (consec.cat === 'high' && consec.count >= 2) {
+      /* Apres 2 predictions hautes consecutives → retour a mid */
+      chosenCat = 'mid';
+      isForced = true;
+    }
+
+    /* 4. Verifier que la tendance du jeu ne contredit pas trop */
+    /* Si le jeu est en tendance basse MAIS on a ete force de predire mid,
+       c'est OK (c'est la transition naturelle apres 3 lows) */
+    /* Si le jeu est en tendance haute MAIS on vient de faire 2 highs,
+       on retombe a mid - c'est la securite */
+
+    /* 5. Generer la valeur */
+    var forceTransition = (isForced && gameTrend === 'low' && chosenCat === 'mid');
+    var pred = generateValue(chosenCat, fullHistory, forceTransition);
+
+    /* 6. Calculer la confiance */
+    var conf = calcConfidence(chosenCat, trendInfo, n, isForced);
+
+    /* 7. Generer les signaux */
+    var signals = [];
+    var signalTypes = [];
+
+    signals.push('tendance_' + gameTrend);
+    signalTypes.push(gameTrend === 'low' ? 'down' : gameTrend === 'high' ? 'up' : 'info');
+
+    if (trendInfo.streakLen >= 3) {
+      signals.push('serie_' + trendInfo.streak + '_' + trendInfo.streakLen);
+      signalTypes.push(trendInfo.streak === 'low' ? 'down' : 'up');
+    }
+
+    if (isForced) {
+      signals.push('rotation_securite');
+      signalTypes.push('info');
+    }
+
+    if (forceTransition) {
+      signals.push('transition_bas_vers_mid');
+      signalTypes.push('up');
+    }
+
+    if (n >= 15) signals.push('memoire_' + n + '_tours');
+    signalTypes.push('info');
+
+    var acc = getAccuracy();
+    if (acc !== null) {
+      signals.push('precision_' + acc + '%');
+      signalTypes.push(acc >= 45 ? 'up' : 'down');
+    }
+
+    return {
+      prediction: pred,
+      confidence: conf,
+      signals: signals,
+      signalTypes: signalTypes,
+      category: chosenCat,
+      rounds: n,
+      avg: Math.round(avg(fullHistory) * 100) / 100,
+      std: Math.round(sd(fullHistory) * 100) / 100,
+      accuracy: acc
+    };
+  }
+
+  return { predict: predict };
+})();
+
+/* ============ STATE DETECTION ============ */
+function getState() {
+  if (!sessionHeaders) return Promise.reject('no session');
+  return fetch(STATE_URL, { method: 'GET', headers: sessionHeaders }).then(function(r) {
+    if (!r.ok) throw new Error('State HTTP ' + r.status);
+    return r.json();
+  });
+}
+
+function walk(o, fn) {
+  var s = [o];
+  while (s.length) {
+    var x = s.pop();
+    if (x && typeof x === 'object') { fn(x); for (var k in x) s.push(x[k]); }
+  }
+}
+
+function detectState(d) {
+  var cs = null, cb = null, cn = null;
+  walk(d, function(obj) {
+    for (var k in obj) {
+      var key = k.toLowerCase(), val = obj[k];
+      if (/(state|status|phase|mode)$/.test(key)) {
+        if (typeof val === 'string' && !cs) cs = val.toLowerCase();
+        if (typeof val === 'boolean' && cb === null) cb = val;
+        if (typeof val === 'number' && cn === null) cn = val;
+      }
+      if (/(running|in_game|ingame|live)$/.test(key) && typeof val === 'boolean' && cb === null) cb = val;
+    }
+  });
+  if (cb === true) return 'running';
+  if (cb === false) return 'waiting';
+  if (cs) {
+    if ('running started start flying play playing live in_game'.indexOf(cs) !== -1) return 'running';
+    if ('crashed crash ended end finished finish dead'.indexOf(cs) !== -1) return 'ended';
+    if ('waiting wait starting betting idle prepare preparing ready countdown'.indexOf(cs) !== -1) return 'waiting';
+  }
+  if (cn === 1) return 'running';
+  if (cn === 2) return 'ended';
+  if (cn === 0) return 'waiting';
+  return 'unknown';
+}
+
+function extractRoundId(d) {
+  var id = null;
+  walk(d, function(obj) {
+    if (id) return;
+    if (obj.round_id != null) id = obj.round_id;
+    else if (obj.roundId != null) id = obj.roundId;
+    else if (obj.id != null && typeof obj.id === 'string' && obj.id.indexOf('-') !== -1) id = obj.id;
+  });
+  return id;
+}
+
+/* ============ PREDICTION FLOW ============ */
+function generatePrediction() {
+  return fetchHistory().then(function(data) {
+    var apiCoefs = extractCoefs(data);
+    if (apiCoefs.length === 0) throw new Error('No crash data');
+
+    /* Valider la prediction precedente avec le dernier resultat */
+    var latestActual = apiCoefs[apiCoefs.length - 1];
+    validateLastPrediction(latestActual);
+
+    /* Fusionner avec la memoire stockee */
+    allHistory = mergeWithMemory(apiCoefs);
+
+    /* Nettoyer les vieilles predictions */
+    clearOldPredictions();
+
+    /* Lancer la prediction sur TOUT l'historique */
+    var result = DVYSPredictor.predict(allHistory);
+
+    /* Enregistrer la prediction */
+    recordPrediction(result.prediction, result.confidence, result.category);
+
+    return {
+      prediction: result.prediction,
+      confidence: result.confidence,
+      signals: result.signals,
+      signalTypes: result.signalTypes,
+      category: result.category,
+      last_rounds: apiCoefs.slice(-15).reverse(),
+      total_rounds: result.rounds,
+      avg: result.avg,
+      std_dev: result.std,
+      accuracy: result.accuracy,
+      status: 'ok'
+    };
+  });
+}
+
+/* ============ DISPLAY ============ */
+function displayPrediction(data) {
+  var pred = parseFloat(data.prediction);
+  if (isNaN(pred) || pred <= 0) {
+    predVal.textContent = 'Erreur';
+    predVal.style.color = '#ff4444';
+    predVal.classList.remove('loading');
+    return;
+  }
+
+  predVal.textContent = pred.toFixed(2) + 'x';
+  predVal.classList.remove('loading');
+
+  /* Couleur selon le seuil: bleu <2, violet 2-9.99, orange >=10 */
+  if (pred >= 10.0) {
+    predVal.style.color = '#ff9800';
+    predVal.style.textShadow = '0 0 30px rgba(255,152,0,.5),0 0 60px rgba(255,152,0,.2)';
+  } else if (pred >= 2.0) {
+    predVal.style.color = '#b388ff';
+    predVal.style.textShadow = '0 0 25px rgba(179,136,255,.5),0 0 50px rgba(179,136,255,.2)';
+  } else {
+    predVal.style.color = '#64b5f6';
+    predVal.style.textShadow = '0 0 25px rgba(100,181,246,.4),0 0 50px rgba(100,181,246,.15)';
+  }
+
+  predConf.textContent = (data.confidence || 0) + '%';
+
+  if (data.total_rounds) roundNum.textContent = '#' + data.total_rounds;
+  if (data.total_rounds) dataInfo.textContent = '\u00b7 ' + data.total_rounds + ' tours';
+
+  if (data.total_rounds && statRounds) statRounds.textContent = data.total_rounds;
+  if (data.avg && statAvg) statAvg.textContent = data.avg + 'x';
+  if (data.std_dev && statStd) statStd.textContent = data.std_dev;
+
+  /* Signaux */
+  sigContainer.innerHTML = '';
+  if (data.signals && data.signals.length) {
+    var types = data.signalTypes || [];
+    data.signals.slice(0, 6).forEach(function(s, idx) {
+      var el = document.createElement('span');
+      el.className = 'sig';
+      var t = types[idx] || 'info';
+      if (t === 'up') el.classList.add('up');
+      else if (t === 'down') el.classList.add('down');
+      else el.classList.add('info');
+      el.textContent = s.replace(/_/g, ' ');
+      sigContainer.appendChild(el);
+    });
+  }
+
+  /* Historique (si l'element existe) */
+  if (histChips) {
+    histChips.innerHTML = '';
+    if (data.last_rounds && data.last_rounds.length) {
+      data.last_rounds.slice(0, 10).forEach(function(v) {
+        var el = document.createElement('span');
+        el.className = 'chip';
+        var fv = parseFloat(v);
+        if (fv < 2) el.classList.add('low');
+        else if (fv < 5) el.classList.add('mid');
+        else el.classList.add('high');
+        el.textContent = fv.toFixed(2) + 'x';
+        histChips.appendChild(el);
+      });
+    }
+  }
+}
+
+/* ============ PREDICTION TRIGGER ============ */
+function doPredict() {
+  if (!sessionHeaders) return;
+  predVal.textContent = 'Analyse...';
+  predVal.classList.add('loading');
+  generatePrediction().then(function(data) {
+    displayPrediction(data);
+  }).catch(function(e) {
+    console.error('Prediction error:', e);
+    predVal.textContent = 'Reconnexion...';
+    predVal.classList.add('loading');
+    setTimeout(doPredict, 6000);
+  });
+}
+
+/* ============ POLLING ============ */
+var RUN = { running: 1 }, END = { ended: 1 }, WAIT = { waiting: 1 };
+
+function triggerPredictionFor(roundId) {
+  if (!roundId || predictedForRoundId === roundId) return;
+  predictedForRoundId = roundId;
+  doPredict();
+}
+
+function poll() {
+  if (!sessionHeaders) { pollingActive = false; return; }
+  getState().then(function(data) {
+    var stateNow = detectState(data);
+    var rid = extractRoundId(data) || Date.now();
+    if (RUN[stateNow] && rid !== currentRoundId) currentRoundId = rid;
+    if (lastState && RUN[lastState] && (END[stateNow] || WAIT[stateNow])) triggerPredictionFor(rid);
+    if (WAIT[stateNow] && predictedForRoundId !== rid) triggerPredictionFor(rid);
+    if (RUN[stateNow]) headerStatus.textContent = 'En vol';
+    else if (WAIT[stateNow]) headerStatus.textContent = 'Attente';
+    else headerStatus.textContent = 'Actif';
+    lastState = stateNow;
+  }).catch(function(e) {
+    console.error('Poll error:', e);
+  }).finally(function() {
+    setTimeout(poll, POLL_MS);
+  });
+}
+
+function startPolling() {
+  if (pollingActive) return;
+  pollingActive = true;
+  poll();
+}
+
+/* ============ INIT ============ */
+(function init() {
+  gameFrame.src = 'https://1play.gamedev-tech.cc/lucky_grm/vgs/?b=' + encodeURIComponent(TOKEN_B) + '&language=en&pid=1win&pik=019aa5d3-290c-7469-b133-89d1948a968c';
+  headerStatus.textContent = 'Auth...';
+
+  /* Charger la memoire au demarrage */
+  var mem = loadMemory();
+  if (mem.history.length > 0) {
+    dataInfo.textContent = '\u00b7 ' + mem.history.length + ' tours';
+  }
+
+  authenticate(TOKEN_B).then(function(data) {
+    liveDot.classList.remove('warn');
+    liveDot.classList.remove('off');
+    headerStatus.textContent = 'Actif';
+
+    var acc = getAccuracy();
+    var msg = 'DVYS connecte - Predictions actives';
+    if (acc !== null) msg += ' (' + acc + '% precision)';
+    showToast(msg, 3500);
+
+    doPredict();
+    startPolling();
+  }).catch(function(e) {
+    headerStatus.textContent = 'Erreur';
+    liveDot.classList.remove('warn');
+    liveDot.classList.add('off');
+    predVal.textContent = '--';
+    predVal.classList.remove('loading');
+    showToast('Auth echouee - Reessayer', 4000);
+    setTimeout(function() { init(); }, 10000);
+  });
+})();
+</script>
+</body>
+</html>
