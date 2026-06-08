@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EURO54 - Controle Mur d'Acces</title>
+  <link rel="icon" href="/images/logo.png" type="image/png">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, 'SF Pro Display', Arial, sans-serif;
+      background: #0a0a0a;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .header .logo {
+      width: 56px; height: 56px;
+      background: linear-gradient(135deg, #007AFF, #5856D6);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 14px;
+      box-shadow: 0 4px 20px rgba(0,122,255,0.35);
+    }
+    .header .logo svg { width: 28px; height: 28px; }
+    .header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+    .header p { font-size: 13px; color: #8E8E93; margin-top: 4px; }
+
+    /* Status Card */
+    .status-card {
+      background: #1C1C1E;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+      border: 1px solid #2C2C2E;
+    }
+    .status-label {
+      font-size: 11px; font-weight: 600;
+      color: #8E8E93;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .status-text {
+      font-size: 22px; font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .status-text.active { color: #34C759; }
+    .status-text.suspended { color: #FF3B30; }
+    .status-text.loading { color: #FF9500; }
+
+    .status-dot {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .status-dot.active { background: #34C759; box-shadow: 0 0 8px rgba(52,199,89,0.5); }
+    .status-dot.suspended { background: #FF3B30; box-shadow: 0 0 8px rgba(255,59,48,0.5); }
+
+    .status-meta {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #636366;
+    }
+
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 18px;
+      border: none;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      letter-spacing: -0.2px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+    .btn-suspend {
+      background: linear-gradient(135deg, #FF3B30, #FF6259);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(255,59,48,0.3);
+    }
+    .btn-suspend:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(255,59,48,0.4); }
+
+    .btn-activate {
+      background: linear-gradient(135deg, #34C759, #30D158);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(52,199,89,0.3);
+    }
+    .btn-activate:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(52,199,89,0.4); }
+
+    /* Spinner */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2.5px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1C1C1E;
+      border: 1px solid #2C2C2E;
+      color: #fff;
+      padding: 14px 24px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { border-color: rgba(52,199,89,0.4); }
+    .toast.error { border-color: rgba(255,59,48,0.4); }
+
+    /* Info */
+    .info {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 11px;
+      color: #48484A;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="container">
+    <div class="header">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <h1>EURO54</h1>
+      <p>Controle du mur d'acces</p>
+    </div>
+
+    <div class="status-card">
+      <div class="status-label">Statut du service</div>
+      <div id="statusText" class="status-text loading">
+        <span class="status-dot loading" id="statusDot"></span>
+        Verification...
+      </div>
+      <div class="status-meta" id="statusMeta"></div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-suspend" id="btnSuspend" disabled onclick="doAction('suspend')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        Suspendre le service
+      </button>
+
+      <button class="btn btn-activate" id="btnActivate" disabled onclick="doAction('activate')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        Reactiver le service
+      </button>
+    </div>
+
+    <div class="info">
+      Suspendre = les pages HTML affichent suspend.html<br>
+      Les APIs et services restent toujours actifs
+    </div>
+  </div>
+
+  <script>
+    var API = 'https://code-ghost-deploy.vercel.app/api/access-wall';
+    var ADMIN_KEY = 'euro54-admin-2024';
+    var busy = false;
+
+    function showToast(msg, type) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show ' + (type || '');
+      setTimeout(function() { t.className = 'toast'; }, 3000);
+    }
+
+    function setStatus(state, meta) {
+      var text = document.getElementById('statusText');
+      var dot = document.getElementById('statusDot');
+      var metaEl = document.getElementById('statusMeta');
+      var btnS = document.getElementById('btnSuspend');
+      var btnA = document.getElementById('btnActivate');
+
+      if (state === 'active') {
+        text.className = 'status-text active';
+        text.innerHTML = '<span class="status-dot active"></span>Service Actif';
+        btnS.disabled = false;
+        btnA.disabled = true;
+      } else if (state === 'suspended') {
+        text.className = 'status-text suspended';
+        text.innerHTML = '<span class="status-dot suspended"></span>Service Suspendu';
+        btnS.disabled = true;
+        btnA.disabled = false;
+      }
+      if (meta) metaEl.textContent = meta;
+    }
+
+    function checkStatus() {
+      fetch(API + '?action=status')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.success && data.data) {
+            var d = data.data;
+            var state = d.isSuspended ? 'suspended' : 'active';
+            var meta = d.daysRemaining !== undefined
+              ? (state === 'active' ? d.daysRemaining + ' jours restants' : 'Suspendu - reactiver pour continuer')
+              : '';
+            setStatus(state, meta);
+          }
+        })
+        .catch(function() {
+          setStatus('active', 'Impossible de verifier le statut');
+        });
+    }
+
+    function doAction(action) {
+      if (busy) return;
+      busy = true;
+
+      var btn = action === 'suspend' ? document.getElementById('btnSuspend') : document.getElementById('btnActivate');
+      var originalHTML = btn.innerHTML;
+      btn.innerHTML = '<div class="spinner"></div> Traitement...';
+      btn.disabled = true;
+
+      fetch(API + '?action=force', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: action, adminKey: ADMIN_KEY })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success && data.data && data.data.success) {
+          showToast(
+            action === 'suspend' ? 'Service suspendu ! Redirection...' : 'Service reactiver ! Redirection...',
+            'success'
+          );
+          // Attendre que le cache du middleware expire (15s) puis verifier
+          setTimeout(function() { checkStatus(); }, 2000);
+          if (action === 'suspend') {
+            setTimeout(function() { window.location.href = '/diagnostic'; }, 3000);
+          } else {
+            setTimeout(function() { window.location.href = '/'; }, 2500);
+          }
+        } else {
+          showToast('Erreur : ' + (data.data && data.data.error ? data.data.error : 'inconnu'), 'error');
+          btn.innerHTML = originalHTML;
+          btn.disabled = false;
+        }
+      })
+      .catch(function() {
+        showToast('Erreur de connexion', 'error');
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+      })
+      .finally(function() { busy = false; });
+    }
+
+    checkStatus();
+  </script>
+
+</body>
+</html>
