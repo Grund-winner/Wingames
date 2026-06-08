@@ -1,4 +1,9 @@
 {
+  "framework": null,
+  "buildCommand": null,
+  "outputDirectory": ".",
+  "cleanUrls": false,
+  "trailingSlash": false,
   "rewrites": [
     { "source": "/wall", "destination": "/wall.html" }
   ]
